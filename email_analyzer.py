@@ -55,10 +55,8 @@ def get_gmail_service():
                 temp.write(json.dumps(client_config).encode("utf-8"))
                 temp_path = temp.name
             
-            # Get the app's URL for the redirect
-            # This should match EXACTLY what's configured in Google Cloud Console
-            base_url = st.runtime.get_instance().runtime_config.get('server', {}).get('baseUrlPath', 'http://localhost:8501')
-            redirect_uri = f"{base_url}/"
+            # Use the hardcoded redirect URI that matches your Google Cloud Console configuration
+            redirect_uri = "https://emailanalyzer-jeepcuohhmah2mqp8x3gqb.streamlit.app/"
             
             st.write(f"Using redirect URI: {redirect_uri}")
             
@@ -82,8 +80,14 @@ def get_gmail_service():
                     st.session_state.gmail_creds = flow.credentials
                     
                     # Clean up the URL by removing the query parameters
-                    st.experimental_set_query_params()
+                    # Note: This might not work in all Streamlit environments
+                    try:
+                        st.set_query_params()
+                    except:
+                        pass
+                        
                     st.success("Authentication successful!")
+                    time.sleep(1)  # Give a moment for the success message to display
                     st.rerun()  # Rerun to clear the auth parameters from URL
                 except Exception as e:
                     st.error(f"Error exchanging code for token: {str(e)}")
@@ -113,7 +117,6 @@ def get_gmail_service():
         if "gmail_creds" in st.session_state:
             del st.session_state.gmail_creds
         st.stop()
-
 
 def fetch_recent_emails(service, start_datetime, end_datetime, desired_count=50, max_fetch=200):
     """
