@@ -26,10 +26,20 @@ def get_gmail_service():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp:
             temp.write(client_config.encode("utf-8"))
             temp_path = temp.name
-        # Run the OAuth flow for the user
+        # Create the flow from the temporary file
         flow = InstalledAppFlow.from_client_secrets_file(temp_path, SCOPES)
-        creds = flow.run_local_server(port=0)
-        st.session_state.gmail_creds = creds
+        # Generate the authorization URL without opening a browser
+        auth_url, _ = flow.authorization_url(prompt='consent')
+        st.write("Please click the link below to authorize the application:")
+        st.markdown(f"[Authorize Here]({auth_url})")
+        # Ask the user to paste the authorization code
+        code = st.text_input("Enter the authorization code:")
+        if code:
+            flow.fetch_token(code=code)
+            creds = flow.credentials
+            st.session_state.gmail_creds = creds
+        else:
+            st.stop()  # Wait until the user enters the code
     else:
         creds = st.session_state.gmail_creds
         if creds and creds.expired and creds.refresh_token:
@@ -37,6 +47,7 @@ def get_gmail_service():
             st.session_state.gmail_creds = creds
     service = build('gmail', 'v1', credentials=creds)
     return service
+
 
 def fetch_recent_emails(service, start_datetime, end_datetime, desired_count=50, max_fetch=200):
     """
