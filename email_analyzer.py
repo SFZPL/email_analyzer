@@ -27,7 +27,12 @@ def get_gmail_service():
             temp.write(client_config.encode("utf-8"))
             temp_path = temp.name
         # Create the flow from the temporary file
-        flow = InstalledAppFlow.from_client_secrets_file(temp_path, SCOPES)
+        flow = InstalledAppFlow.from_client_secrets_file(
+            temp_path,
+            SCOPES,
+            redirect_uri="https://emailanalyzer-jeepcuohhmah2mqp8x3gqb.streamlit.app/"
+        )
+
         # Generate the authorization URL without opening a browser
         auth_url, _ = flow.authorization_url(prompt='consent')
         st.write("Please click the link below to authorize the application:")
