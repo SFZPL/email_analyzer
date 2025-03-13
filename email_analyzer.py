@@ -17,8 +17,9 @@ load_dotenv()  # Loads variables from .env into the environment
 # Gmail integration scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
-# Configure OpenAI (from environment variable or Streamlit secrets)
-openai.api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+openai.api_key = os.getenv("OPENAI_API_KEY", "")
+if not openai.api_key and "openai" in st.secrets:
+    openai.api_key = st.secrets["openai"]["api_key"]
 
 def get_gmail_service():
     """
@@ -187,12 +188,15 @@ def fetch_recent_emails(service, start_datetime, end_datetime, desired_count=50,
         return []
 
 
+
+# Then update the analyze_email_openai function to better handle missing API key
 def analyze_email_openai(email_text: str) -> str:
     """
     Uses OpenAI's ChatCompletion to extract structured info from an email.
     """
     if not openai.api_key:
-        return "OpenAI API key not configured. Please set OPENAI_API_KEY in environment or secrets."
+        st.error("OpenAI API key not configured. Please add it to your secrets.toml file.")
+        return "API key missing - unable to analyze email content."
     
     prompt = (
         f"Extract all relevant details for a service request from the email below:\n\n"
@@ -226,7 +230,6 @@ def analyze_email_openai(email_text: str) -> str:
             else:
                 st.error(f"Failed to analyze email after {max_retries} attempts: {str(e)}")
                 return f"Error analyzing email: {str(e)}"
-
 
 def compute_priority(email, extracted_info):
     # Calculate urgency score by counting urgency-related keywords in the extracted info.
