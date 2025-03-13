@@ -1,8 +1,5 @@
-streamlit>=1.0.0
-openai>=0.27.0
-google-auth>=2.3.0
-google-auth-oauthlib>=0.4.6
-google-api-python-client>=2.60.0
-beautifulsoup4>=4.11.1
-python-docx>=0.8.11
-python-dotenv>=0.20.0
+streamlit
+google-auth-oauthlib
+google-api-python-client
+openai==0.28.1
+python-dotenv
