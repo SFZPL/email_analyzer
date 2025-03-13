@@ -22,6 +22,7 @@ def get_gmail_service():
     if "gmail_creds" not in st.session_state:
         # Load client config from Streamlit secrets
         client_config = st.secrets["gcp"]["client_config"]
+        # Write the JSON string to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp:
             temp.write(client_config.encode("utf-8"))
             temp_path = temp.name
@@ -32,26 +33,28 @@ def get_gmail_service():
             redirect_uri="https://emailanalyzer-jeepcuohhmah2mqp8x3gqb.streamlit.app/"
         )
         
-        # Check for an authorization code in the URL query parameters
-        query_params = st.experimental_get_query_params()
-        if "code" in query_params:
+        # Check for an authorization code in the URL using st.query_params
+        query_params = st.query_params
+        # Only fetch the token if a code is present and we haven't already processed it
+        if "code" in query_params and "code_fetched" not in st.session_state:
             code = query_params["code"][0]
             flow.fetch_token(code=code)
             st.session_state.gmail_creds = flow.credentials
+            st.session_state.code_fetched = True
         else:
-            # No code yet: display the authorization URL to the user
+            # No valid code yet: display the authorization URL and stop until user completes auth
             auth_url, _ = flow.authorization_url(prompt='consent')
             st.write("Please click the link below to authorize the application:")
             st.markdown(f"[Authorize Here]({auth_url})")
-            st.stop()  # Stop the app until the user authorizes
+            st.stop()  # Wait until the user authorizes and the code is available in the query params
     else:
         creds = st.session_state.gmail_creds
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             st.session_state.gmail_creds = creds
+
     service = build('gmail', 'v1', credentials=st.session_state.gmail_creds)
     return service
-
 
 
 def fetch_recent_emails(service, start_datetime, end_datetime, desired_count=50, max_fetch=200):
