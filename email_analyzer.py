@@ -22,36 +22,36 @@ def get_gmail_service():
     if "gmail_creds" not in st.session_state:
         # Load client config from Streamlit secrets
         client_config = st.secrets["gcp"]["client_config"]
-        # Write the JSON string to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp:
             temp.write(client_config.encode("utf-8"))
             temp_path = temp.name
-        # Create the flow from the temporary file
+        # Create the OAuth flow, specifying your redirect URI
         flow = InstalledAppFlow.from_client_secrets_file(
             temp_path,
             SCOPES,
             redirect_uri="https://emailanalyzer-jeepcuohhmah2mqp8x3gqb.streamlit.app/"
         )
-
-        # Generate the authorization URL without opening a browser
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        st.write("Please click the link below to authorize the application:")
-        st.markdown(f"[Authorize Here]({auth_url})")
-        # Ask the user to paste the authorization code
-        code = st.text_input("Enter the authorization code:")
-        if code:
+        
+        # Check for an authorization code in the URL query parameters
+        query_params = st.experimental_get_query_params()
+        if "code" in query_params:
+            code = query_params["code"][0]
             flow.fetch_token(code=code)
-            creds = flow.credentials
-            st.session_state.gmail_creds = creds
+            st.session_state.gmail_creds = flow.credentials
         else:
-            st.stop()  # Wait until the user enters the code
+            # No code yet: display the authorization URL to the user
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            st.write("Please click the link below to authorize the application:")
+            st.markdown(f"[Authorize Here]({auth_url})")
+            st.stop()  # Stop the app until the user authorizes
     else:
         creds = st.session_state.gmail_creds
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             st.session_state.gmail_creds = creds
-    service = build('gmail', 'v1', credentials=creds)
+    service = build('gmail', 'v1', credentials=st.session_state.gmail_creds)
     return service
+
 
 
 def fetch_recent_emails(service, start_datetime, end_datetime, desired_count=50, max_fetch=200):
